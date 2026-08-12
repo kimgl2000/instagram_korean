@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="ko" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Photogram">
+<meta name="theme-color" content="#ffffff">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="manifest" href="manifest.json">
+<title>Photogram</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+  :root{
+    --bg:#ffffff; --text:#000; --text2:#737373; --line:#dbdbdb; --line2:#efefef;
+    --blue:#0095f6; --red:#ed4956;
+  }
+  html,body{height:100%;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:#000; color:var(--text);
+    display:flex; justify-content:center;
+  }
+  #app{
+    width:100%; max-width:460px; background:var(--bg);
+    height:100dvh; position:relative; overflow:hidden;
+    display:flex; flex-direction:column;
+  }
+  .screen{
+    position:absolute; inset:0; display:flex; flex-direction:column;
+    background:var(--bg); overflow:hidden;
+  }
+  .screen.hidden{ display:none !important; }
+  .scroll{ flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+
+  /* ===== top bar ===== */
+  .topbar{
+    height:48px; flex:0 0 48px; display:flex; align-items:center; justify-content:space-between;
+    padding:0 12px; border-bottom:1px solid var(--line2); background:var(--bg);
+  }
+  .topbar .uname{ display:flex; align-items:center; gap:5px; font-size:20px; font-weight:700;}
+  .topbar .uname svg{width:13px;height:13px;}
+  .topbar .actions{ display:flex; align-items:center; gap:18px;}
+  .icon-btn{ background:none;border:none;cursor:pointer;display:flex;align-items:center;color:var(--text);}
+  .icon-btn svg{ width:24px; height:24px; stroke:var(--text); fill:none; stroke-width:1.8;}
+  .back-btn svg{ width:24px; height:24px;}
+
+  /* ===== profile header ===== */
+  .phead{ padding:16px 16px 0;}
+  .prow{ display:flex; align-items:center; gap:24px;}
+  .avatar{
+    width:84px; height:84px; border-radius:50%; flex:0 0 84px; cursor:pointer;
+    background:#efefef center/cover no-repeat;
+    border:1px solid var(--line); position:relative; overflow:hidden;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .avatar svg{ width:40px; height:40px; fill:#c7c7c7;}
+  .pstats{ flex:1; display:flex; justify-content:space-around; align-items:center;}
+  .pstats .stat{ text-align:center;}
+  .pstats .n{ font-size:18px; font-weight:700;}
+  .pstats .l{ font-size:13px; color:var(--text);}
+  .pbio{ padding:12px 0 4px;}
+  .pbio .name{ font-size:14px; font-weight:600;}
+  .pbio .desc{ font-size:14px; line-height:1.4; white-space:pre-wrap;}
+  .pbtns{ display:flex; gap:6px; padding:12px 0 4px;}
+  .pbtns button{
+    flex:1; height:32px; border:none; border-radius:8px; background:#efefef;
+    font-size:14px; font-weight:600; color:var(--text); cursor:pointer;
+  }
+
+  /* ===== tabs ===== */
+  .tabs{ display:flex; border-top:1px solid var(--line2); margin-top:14px;}
+  .tab{ flex:1; height:44px; display:flex; align-items:center; justify-content:center;
+    background:none; border:none; cursor:pointer; border-bottom:1px solid transparent; color:#c7c7c7;}
+  .tab.active{ color:var(--text); border-bottom:1px solid var(--text);}
+  .tab svg{ width:24px; height:24px; stroke:currentColor; fill:none; stroke-width:1.8;}
+  .tab.active svg.fillicon{ fill:currentColor; stroke:none;}
+
+  /* ===== grid ===== */
+  .grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:2px;}
+  .cell{ position:relative; aspect-ratio:1/1; background:#fafafa; overflow:hidden; cursor:pointer;}
+  .cell img,.cell video{ width:100%; height:100%; object-fit:cover; display:block; pointer-events:none;}
+  .cell .empty{ width:100%;height:100%;background:#f0f0f0;}
+  .cell .reeltag{ position:absolute; top:6px; right:6px;}
+  .cell .reeltag svg{ width:18px;height:18px; fill:#fff; filter:drop-shadow(0 0 2px rgba(0,0,0,.4));}
+  .addtile{ display:flex;align-items:center;justify-content:center; background:#fafafa; border:1px dashed var(--line);}
+  .addtile svg{ width:34px;height:34px; stroke:#b0b0b0; fill:none; stroke-width:1.6;}
+
+  .emptystate{ padding:60px 24px; text-align:center; color:var(--text2);}
+  .emptystate .ring{ width:62px;height:62px;border:2px solid var(--text);border-radius:50%;
+    display:flex;align-items:center;justify-content:center;margin:0 auto 16px;}
+  .emptystate .ring svg{width:30px;height:30px;stroke:var(--text);fill:none;stroke-width:1.6;}
+  .emptystate h3{ font-size:22px; font-weight:800; color:var(--text); margin-bottom:6px;}
+  .emptystate p{ font-size:14px; margin-bottom:14px;}
+  .emptystate button{ background:none;border:none;color:var(--blue);font-weight:600;font-size:14px;cursor:pointer;}
+
+  /* ===== feed ===== */
+  .post{ border-bottom:1px solid var(--line2); padding-bottom:8px;}
+  .post .head{ display:flex; align-items:center; gap:10px; padding:10px 12px;}
+  .post .head .av{ width:32px;height:32px;border-radius:50%;background:#efefef center/cover no-repeat;
+    flex:0 0 32px; border:1px solid var(--line); display:flex;align-items:center;justify-content:center;}
+  .post .head .av svg{width:16px;height:16px;fill:#c7c7c7;}
+  .post .head .who{ flex:1; font-size:13px; font-weight:600; line-height:1.2;}
+  .post .head .who .date{ display:block; font-size:11px; font-weight:400; color:var(--text2); cursor:pointer;}
+  .post .head .who .loc{ display:block; font-size:11px; font-weight:400; color:#262626; cursor:pointer;}
+  .post .media{ width:100%; background:var(--bg); display:flex;align-items:center;justify-content:center;}
+  .post .media img{ width:100%; height:auto; display:block; object-fit:contain;}
+  .post .media video{ width:100%; height:auto; display:block; object-fit:contain; background:#000;}
+  .post .media .ph{ color:#777; font-size:13px; padding:40px 0;}
+  .post .bar{ display:flex; align-items:center; gap:16px; padding:8px 12px 2px;}
+  .post .bar svg{ width:24px;height:24px; stroke:var(--text); fill:none; stroke-width:1.8; cursor:pointer;}
+  .post .bar svg.liked{ fill:var(--red); stroke:var(--red);}
+  .post .bar .spacer{ flex:1;}
+  .post .likes{ font-size:13px; font-weight:600; padding:2px 12px;}
+  .post .cap{ font-size:14px; line-height:1.4; padding:2px 12px; white-space:pre-wrap;}
+  .post .pdate{ font-size:10px; letter-spacing:.3px; color:var(--text2); text-transform:uppercase; padding:4px 12px 0; cursor:pointer;}
+  .post .cap b{ font-weight:600; margin-inline-end:5px;}
+  .post .comments{ padding:4px 12px 0;}
+  .post .comments .c{ font-size:14px; line-height:1.5;}
+  .post .comments .c b{ font-weight:600; margin-inline-end:6px;}
+  .post .comments .cwrap{ margin-bottom:6px;}
+  .post .comments .trans-link{ display:inline-block; font-size:12px; color:var(--text2); cursor:pointer; margin-top:1px;}
+  .post .comments .trans-out{ display:none; font-size:14px; line-height:1.5; color:#262626; margin-top:2px; text-align:right;}
+  .post .addc{ display:flex; align-items:center; gap:8px; padding:8px 12px 2px;}
+  .post .addc .cname{ width:84px; flex:0 0 84px; border:none; border-bottom:1px solid var(--line2);
+    font-size:12px; padding:4px 2px; outline:none; color:var(--text2);}
+  .post .addc .ctext{ flex:1; border:none; border-bottom:1px solid var(--line2);
+    font-size:13px; padding:4px 2px; outline:none;}
+  .post .addc button{ background:none;border:none;color:var(--blue);font-weight:600;font-size:13px;cursor:pointer;opacity:.4;}
+  .post .addc button.on{ opacity:1;}
+
+  /* ===== reels player ===== */
+  #reelsScreen{ background:#000;}
+  .reelsfeed{ flex:1; overflow-y:auto; scroll-snap-type:y mandatory; -webkit-overflow-scrolling:touch;}
+  .reel{ height:100dvh; scroll-snap-align:start; position:relative; display:flex;align-items:center;justify-content:center; background:#000;}
+  .reel video{ width:100%; height:100%; object-fit:contain;}
+  .reel .rinfo{ position:absolute; right:14px; bottom:90px; color:#fff; max-width:75%;}
+  .reel .rinfo .u{ font-size:14px; font-weight:700; display:flex; gap:6px; align-items:center;}
+  .reel .rinfo .d{ font-size:12px; opacity:.85; margin-top:4px; cursor:pointer;}
+  .reel .rinfo .cap{ font-size:13px; margin-top:6px; line-height:1.4;}
+  .reel .empty{ color:#888; font-size:14px;}
+  #reelsScreen .topbar{ position:absolute; top:0; left:0; right:0; z-index:5; background:transparent; border:none; color:#fff;}
+  #reelsScreen .topbar .uname,#reelsScreen .topbar .icon-btn svg{ color:#fff; stroke:#fff;}
+  #reelsScreen .topbar .uname{ color:#fff;}
+
+  /* ===== bottom nav ===== */
+  .botnav{ min-height:50px; flex:0 0 auto; display:flex; align-items:center; justify-content:space-around;
+    border-top:1px solid var(--line2); background:var(--bg); padding-bottom:env(safe-area-inset-bottom);}
+  .botnav button{ background:none;border:none;cursor:pointer;display:flex;align-items:center;color:var(--text);}
+  .botnav svg{ width:26px;height:26px; stroke:var(--text); fill:none; stroke-width:1.7;}
+  .botnav .pf{ width:26px;height:26px;border-radius:50%;background:#efefef center/cover no-repeat;border:1px solid var(--line);}
+  .botnav button.active .pf{ border:2px solid var(--text);}
+
+  /* ===== sheets / modals ===== */
+  .sheet-bg{ position:absolute; inset:0; background:rgba(0,0,0,.45); z-index:50; display:none; align-items:flex-end;}
+  .sheet-bg.show{ display:flex;}
+  .sheet{ width:100%; background:var(--bg); border-radius:14px 14px 0 0; padding:8px 0 20px; animation:up .25s ease;}
+  @keyframes up{ from{transform:translateY(100%);} to{transform:translateY(0);} }
+  .sheet .grab{ width:38px;height:4px;background:#d0d0d0;border-radius:2px;margin:6px auto 12px;}
+  .sheet .opt{ width:100%; background:none;border:none; text-align:start; padding:15px 22px; font-size:16px; cursor:pointer; display:flex;align-items:center;gap:14px; color:var(--text);}
+  .sheet .opt:disabled{ opacity:.35; cursor:default;}
+  .sheet .opt svg{ width:22px;height:22px; stroke:var(--text); fill:none; stroke-width:1.8;}
+  .sheet .opt.danger{ color:var(--red);} .sheet .opt.danger svg{ stroke:var(--red);}
+
+  /* comment bottom sheet */
+  .cmt-bg{ position:absolute; inset:0; background:rgba(0,0,0,.45); z-index:60; display:none; align-items:flex-end;}
+  .cmt-bg.show{ display:flex;}
+  .cmt-sheet{ width:100%; height:78%; background:var(--bg); border-radius:14px 14px 0 0; display:flex; flex-direction:column; animation:up .28s ease;}
+  .cmt-sheet .grab{ width:38px;height:4px;background:#d0d0d0;border-radius:2px;margin:8px auto 6px;}
+  .cmt-sheet .cmt-title{ text-align:center; font-weight:700; font-size:15px; padding:6px 0 12px; border-bottom:1px solid var(--line2);}
+  .cmt-list{ flex:1; overflow-y:auto; padding:14px 14px 6px;}
+  .cmt-list .cwrap{ margin-bottom:16px; display:flex; gap:10px; align-items:flex-start;}
+  .cmt-list .cavatar{width:32px;height:32px;flex:0 0 32px;border-radius:50%;background:#efefef center/cover no-repeat;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;overflow:hidden;}
+  .cmt-list .cavatar svg{width:16px;height:16px;fill:#c7c7c7;}
+  .cmt-list .cbody{flex:1;min-width:0;}
+  .cmt-list .ctop{display:flex;align-items:flex-start;gap:6px;}
+  .cmt-list .c{ flex:1;font-size:14px; line-height:1.45;}
+  .cmt-list .c b{ font-weight:600; margin-inline-end:6px;}
+  .cmt-list .cmenu{border:none;background:none;color:var(--text2);font-size:20px;line-height:16px;padding:0 2px;cursor:pointer;transform:translateY(-1px);}
+  .cmt-list .cmeta{font-size:11px;color:var(--text2);margin-top:3px;display:flex;gap:10px;align-items:center;}
+  .cmt-list .cmeta .dot{font-size:8px;opacity:.7;}
+  .cmt-list .trans-link{ display:inline-block; font-size:12px; color:var(--text2); cursor:pointer; margin-top:2px;}
+  .cmt-list .trans-out{ display:none; font-size:14px; line-height:1.5; color:#262626; margin-top:2px; text-align:right;}
+  .cmt-list .empty{ text-align:center; color:var(--text2); font-size:14px; padding:40px 0;}
+  .cmt-input{ display:flex; align-items:center; gap:8px; padding:10px 14px; border-top:1px solid var(--line2);}
+  .cmt-input .cname{ width:90px; flex:0 0 90px; border:none; border-bottom:1px solid var(--line2); padding:6px 2px; font-size:13px; font-family:inherit; outline:none; color:var(--text2);}
+  .cmt-input .ctext{ flex:1; border:none; border-bottom:1px solid var(--line2); padding:6px 2px; font-size:14px; font-family:inherit; outline:none;}
+  .cmt-input button{ background:none;border:none;color:var(--blue);font-weight:600;font-size:14px;cursor:pointer;opacity:.4;}
+  .cmt-input button.on{ opacity:1;}
+  .post .viewall{ color:var(--text2); font-size:14px; padding:3px 12px 0; cursor:pointer;}
+  .post .addc-mini{ color:var(--text2); font-size:14px; padding:6px 12px 2px; cursor:pointer;}
+
+
+  /* shooting conversation scenario */
+  .scenario-modal{max-height:90dvh;display:flex;flex-direction:column;}
+  .scenario-modal .mbody{overflow-y:auto;}
+  .scenario-toolbar{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;}
+  .scenario-toolbar button,.scenario-add{border:none;border-radius:9px;padding:10px 8px;background:#efefef;font-size:13px;font-weight:650;cursor:pointer;color:#111;}
+  .scenario-toolbar button.primary-ctl{background:#0095f6;color:white;}
+  .scenario-status{font-size:12px;padding:9px 10px;border-radius:8px;background:#fafafa;border:1px solid var(--line2);color:var(--text2);line-height:1.4;}
+  .scenario-row{border:1px solid var(--line2);border-radius:12px;padding:10px;margin-top:9px;background:#fff;}
+  .scenario-row-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+  .scenario-row-head b{font-size:13px;}
+  .scenario-row-head button{border:none;background:none;color:var(--red);font-size:12px;cursor:pointer;}
+  .scenario-row-grid{display:grid;grid-template-columns:88px 1fr;gap:8px;align-items:end;}
+  .scenario-row label{display:block;font-size:11px;color:var(--text2);font-weight:600;margin-bottom:4px;}
+  .scenario-row input[type=number],.scenario-row textarea{width:100%;border:1px solid var(--line);border-radius:8px;padding:8px;font:inherit;font-size:13px;outline:none;resize:vertical;}
+  .scenario-row .notifyline{display:flex;align-items:center;gap:6px;font-size:12px;color:#444;margin-top:8px;}
+  .scenario-help{font-size:11px;color:var(--text2);line-height:1.45;}
+
+  /* center modal (upload / date) */
+  .modal-bg{ position:absolute; inset:0; background:rgba(0,0,0,.5); z-index:60; display:none; align-items:center; justify-content:center; padding:20px;}
+  .modal-bg.show{ display:flex;}
+  .modal{ width:100%; max-width:360px; background:var(--bg); border-radius:14px; overflow:hidden; animation:pop .2s ease;}
+  @keyframes pop{ from{transform:scale(.92);opacity:0;} to{transform:scale(1);opacity:1;} }
+  .modal .mhead{ padding:16px; font-size:16px; font-weight:700; text-align:center; border-bottom:1px solid var(--line2);}
+  .modal .mbody{ padding:16px; display:flex; flex-direction:column; gap:12px;}
+  .modal .preview{ width:100%; background:#f0f0f0; border-radius:8px; overflow:hidden; display:flex;align-items:center;justify-content:center;}
+  .modal .preview img,.modal .preview video{ width:100%; height:auto; display:block; max-height:60vh; object-fit:contain;}
+  .modal label{ font-size:12px; color:var(--text2); font-weight:600;}
+  .modal input[type=date],.modal input[type=text],.modal input[type=number],.modal select,.modal textarea{ width:100%; border:1px solid var(--line); border-radius:8px; padding:10px; font-size:14px; font-family:inherit; outline:none; resize:none;background:#fff;color:var(--text);}
+  .admin-hint{font-size:11.5px;color:var(--text2);line-height:1.45;margin-top:4px;}
+  .modal .mfoot{ display:flex; border-top:1px solid var(--line2);}
+  .modal .mfoot button{ flex:1; height:48px; background:none;border:none;font-size:15px;cursor:pointer; color:var(--text);}
+  .modal .mfoot button.primary{ color:var(--blue); font-weight:700; border-inline-start:1px solid var(--line2);}
+
+  .noti{
+    position:fixed; top:0; left:0; right:0; z-index:99999;
+    margin:8px; padding:11px 13px;
+    background:#fdfdfd; border-radius:22px;
+    box-shadow:0 6px 26px rgba(0,0,0,.22);
+    display:flex; align-items:center; gap:11px;
+    transform:translateY(-180%); transition:transform .45s cubic-bezier(.2,.9,.3,1.15);
+    cursor:pointer;
+  }
+  .noti.show{ transform:translateY(0); }
+  .noti .ic{ width:38px;height:38px;flex:0 0 38px; border-radius:10px; overflow:hidden;}
+  .noti .ic svg{ display:block; width:38px;height:38px;}
+  .noti .tx{ flex:1; min-width:0;}
+  .noti .tx .top{ font-size:11px; color:#8e8e8e; margin-bottom:1px;}
+  .noti .tx .ti{ font-size:13px; font-weight:700; color:#000; line-height:1.25;}
+  .noti .tx .bd{ font-size:12.5px; color:#262626; line-height:1.3; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;}
+  .noti .thumb{ width:38px;height:38px;flex:0 0 38px; border-radius:5px; background:#eee center/cover no-repeat;}
+  .hidden-input{ display:none;}
+  /* login screen */
+  #loginScreen{ background:var(--bg);}
+  .login{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0 34px; gap:14px;}
+  .login-logo{ font-size:44px; font-weight:500; font-style:italic; font-family:'Segoe Script','Brush Script MT',cursive; margin-bottom:26px; letter-spacing:.5px;}
+  .login-in{ width:100%; background:#fafafa; border:1px solid var(--line); border-radius:8px; padding:12px 12px; font-size:14px; font-family:inherit; outline:none; direction:ltr;}
+  .login-btn{ width:100%; background:var(--blue); color:#fff; border:none; border-radius:9px; padding:12px; font-size:15px; font-weight:600; cursor:pointer; margin-top:4px;}
+  .login-forgot{ font-size:12.5px; color:#385185; margin-top:8px;}
+  .login-foot{ font-size:13px; color:var(--text2); margin-top:40px;}
+  .login-foot b{ color:var(--blue); font-weight:600;}
+</style>
+</head>
+<body>
+<div class="noti" id="noti" onclick="this.classList.remove('show')"></div>
+<div id="app">
+
+  <!-- ============ PROFILE ============ -->
+  <div class="screen" id="profileScreen">
+    <div class="topbar">
+      <div class="uname">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 9V7a5 5 0 00-10 0v2H5v13h14V9h-2zM9 7a3 3 0 016 0v2H9V7z"/></svg>
+        seen.by.two
+        <svg viewBox="0 0 24 24" fill="currentColor" style="width:11px;height:11px;"><path d="M7 10l5 5 5-5z"/></svg>
+      </div>
+      <div class="actions">
+        <button class="icon-btn" onclick="openAddMenu()" title="추가">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        </button>
+        <button class="icon-btn" onclick="openProfileMenu()" title="메뉴">
+          <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="scroll">
+      <div class="phead">
+        <div class="prow">
+          <div class="avatar" id="avatarBox" onclick="changeAvatar()">
+            <svg viewBox="0 0 24 24"><path d="M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c-5 0-9 2.5-9 6v2h18v-2c0-3.5-4-6-9-6z"/></svg>
+          </div>
+          <div class="pstats">
+            <div class="stat"><div class="n" id="postCount">0</div><div class="l">게시물</div></div>
+            <div class="stat"><div class="n">0</div><div class="l">팔로워</div></div>
+            <div class="stat"><div class="n">0</div><div class="l">팔로잉</div></div>
+          </div>
+        </div>
+        <div class="pbio">
+          <div class="name">seen.by.two</div>
+          <div class="desc" id="bioText"></div>
+        </div>
+        <div class="pbtns">
+          <button onclick="editBio()">프로필 편집</button>
+          <button onclick="openShootCommentManager()">프로필 공유</button>
+        </div>
+      </div>
+
+      <div class="tabs">
+        <button class="tab active" id="tabGrid" onclick="switchTab('grid')">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="1.5"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/></svg>
+        </button>
+        <button class="tab" id="tabReels" onclick="switchTab('reels')">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M3 8h18M8 3l2.5 5M14 3l2.5 5"/><path d="M10.5 10.5v5l4-2.5z" fill="currentColor" stroke="none"/></svg>
+        </button>
+        <button class="tab" id="tabTag" onclick="switchTab('tag')">
+          <svg viewBox="0 0 24 24"><path d="M4 7a2 2 0 012-2h12a2 2 0 012 2v13l-8-4-8 4V7z"/></svg>
+        </button>
+      </div>
+
+      <div id="gridWrap"></div>
+    </div>
+
+    <div class="botnav">
+      <button onclick="openFeed(0)"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></svg></button>
+      <button onclick="openReels()"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M3 8h18M8 3l2.5 5M14 3l2.5 5"/><path d="M10.5 10.5v5l4-2.5z" fill="currentColor" stroke="none"/></svg></button>
+      <button onclick="openAddMenu()"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></button>
+      <button class="active"><span class="pf" id="navPf"></span></button>
+    </div>
+  </div>
+
+  <!-- ============ LOGIN ============ -->
+  <div class="screen hidden" id="loginScreen">
+    <div class="login">
+      <div class="login-logo">Photogram</div>
+      <input class="login-in" id="loginUser" value="seen.by.two" placeholder="사용자 이름">
+      <input class="login-in" id="loginPass" type="password" value="000000" placeholder="비밀번호">
+      <button class="login-btn" onclick="doLogin()">로그인</button>
+      <div class="login-forgot">비밀번호를 잊으셨나요?</div>
+      <div class="login-foot">계정이 없으신가요? <b>가입하기</b></div>
+    </div>
+  </div>
+
+  <!-- ============ FEED ============ -->
+  <div class="screen hidden" id="feedScreen">
+    <div class="topbar">
+      <button class="icon-btn back-btn" onclick="showScreen('profileScreen')">
+        <svg viewBox="0 0 24 24"><polyline points="9 5 16 12 9 19"/></svg>
+      </button>
+      <div class="uname" style="font-size:16px;">게시물</div>
+      <div style="width:24px;"></div>
+    </div>
+    <div class="scroll" id="feedWrap"></div>
+  </div>
+
+  <!-- ============ REELS ============ -->
+  <div class="screen hidden" id="reelsScreen">
+    <div class="topbar">
+      <button class="icon-btn back-btn" onclick="showScreen('profileScreen')">
+        <svg viewBox="0 0 24 24" style="stroke:#fff;"><polyline points="9 5 16 12 9 19"/></svg>
+      </button>
+      <div class="uname" style="font-size:18px;color:#fff;">릴스</div>
+      <button class="icon-btn" onclick="addMedia('reel')">
+        <svg viewBox="0 0 24 24" style="stroke:#fff;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </button>
+    </div>
+    <div class="reelsfeed" id="reelsWrap"></div>
+  </div>
+
+  <!-- ============ bottom sheet (add menu / post menu) ============ -->
+  <div class="sheet-bg" id="sheetBg" onclick="if(event.target===this)closeSheet()">
+    <div class="sheet" id="sheetBody"></div>
+  </div>
+
+  <!-- ============ comment sheet ============ -->
+  <div class="cmt-bg" id="cmtBg" onclick="if(event.target===this)closeComments()">
+    <div class="cmt-sheet">
+      <div class="grab"></div>
+      <div class="cmt-title">댓글</div>
+      <div class="cmt-list" id="cmtList"></div>
+      <div class="cmt-input">
+        <input class="ctext" id="scText" dir="rtl" placeholder="댓글 달기..." oninput="scToggle()">
+        <button id="scBtn" onclick="scAdd()">게시</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ center modal (upload / date / bio) ============ -->
+  <div class="modal-bg" id="modalBg">
+    <div class="modal" id="modalBody"></div>
+  </div>
+
+  <!-- hidden file inputs -->
+  <input type="file" id="photoInput" class="hidden-input" accept="image/*">
+  <input type="file" id="videoInput" class="hidden-input" accept="video/*">
+  <input type="file" id="avatarInput" class="hidden-input" accept="image/*">
+</div>
+
+<script>
+/* ---------- storage: metadata in localStorage, media blobs in IndexedDB ---------- */
+const KEY='seenbytwo_v1';
+let state={ posts:[], reels:[], avatar:'', bio:'' };
+
+function load(){ try{ const s=localStorage.getItem(KEY); if(s) state=JSON.parse(s);}catch(e){} }
+function stripUrl(it){ const c=Object.assign({},it); delete c._url; return c; }
+function save(){
+  try{
+    const clean={ posts:(state.posts||[]).map(stripUrl), reels:(state.reels||[]).map(stripUrl), avatar:state.avatar, bio:state.bio, shootScenario:state.shootScenario||{postIndex:0,rows:[]} };
+    localStorage.setItem(KEY, JSON.stringify(clean));
+  }catch(e){ /* quota/preview: keep in memory */ }
+}
+
+/* IndexedDB media store */
+let _db=null;
+function openDB(){
+  if(_db) return Promise.resolve(_db);
+  return new Promise((res,rej)=>{
+    try{
+      const r=indexedDB.open('seenbytwo_media',1);
+      r.onupgradeneeded=()=>{ if(!r.result.objectStoreNames.contains('media')) r.result.createObjectStore('media',{keyPath:'id'}); };
+      r.onsuccess=()=>{ _db=r.result; res(_db); };
+      r.onerror=()=>rej(r.error);
+    }catch(e){ rej(e); }
+  });
+}
+async function idbPut(id,blob){ const db=await openDB(); return new Promise((res,rej)=>{ const tx=db.transaction('media','readwrite'); tx.objectStore('media').put({id,blob}); tx.oncomplete=()=>res(true); tx.onerror=()=>rej(tx.error); }); }
+async function idbGet(id){ const db=await openDB(); return new Promise((res,rej)=>{ const tx=db.transaction('media','readonly'); const q=tx.objectStore('media').get(id); q.onsuccess=()=>res(q.result?q.result.blob:null); q.onerror=()=>rej(q.error); }); }
+async function idbDel(id){ try{ const db=await openDB(); return new Promise((res)=>{ const tx=db.transaction('media','readwrite'); tx.objectStore('media').delete(id); tx.oncomplete=()=>res(); tx.onerror=()=>res(); }); }catch(e){} }
+
+/* recreate object URLs from stored blobs after reload */
+async function hydrate(){
+  for(const arr of [state.posts||[], state.reels||[]]){
+    for(const it of arr){
+      if(it._url) continue;
+      if(it.mediaId){ try{ const b=await idbGet(it.mediaId); if(b) it._url=URL.createObjectURL(b); }catch(e){} }
+      else if(it.src){ it._url=it.src; } /* legacy base64 items */
+    }
+  }
+}
+function murl(it){ return it && (it._url || it.src) ? (it._url||it.src) : ''; }
+
+load();
+if(state.bio==='🔒 비공개 계정') state.bio='';
+if(!state.posts) state.posts=[]; if(!state.reels) state.reels=[]; if(!state.shootScenario) state.shootScenario={postIndex:0,rows:[]};
+ensureCommentTimes(); save();
+
+let currentTab='grid';
+function $(id){ return document.getElementById(id); }
+
+/* ---------- screen nav ---------- */
+function showScreen(id){
+  document.querySelectorAll('.screen video').forEach(v=>{ try{ v.pause(); }catch(e){} });
+  document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));
+  $(id).classList.remove('hidden');
+}
+
+/* ---------- date helpers ---------- */
+function today(){ return new Date().toISOString().slice(0,10); }
+function fmt(d){
+  if(!d) return '';
+  const [y,m,day]=d.split('-');
+  const M=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월']; return `${y}년 ${M[parseInt(m)-1]} ${parseInt(day)}일`;
+}
+
+function relTime(ts){
+  if(!ts) return '방금 전';
+  const sec=Math.max(0,Math.floor((Date.now()-ts)/1000));
+  if(sec<45) return '방금 전';
+  const min=Math.floor(sec/60);
+  if(min<60) return `${min}분 전`;
+  const hr=Math.floor(min/60);
+  if(hr<24) return `${hr}시간 전`;
+  const day=Math.floor(hr/24);
+  return `${day}일 전`;
+}
+function ensureCommentTimes(){
+  const now=Date.now();
+  (state.posts||[]).forEach(p=>(p.comments||[]).forEach((c,idx)=>{ if(!c.createdAt)c.createdAt=now-(p.comments.length-idx)*45000; }));
+}
+
+/* ---------- render profile ---------- */
+function renderProfile(){
+  $('postCount').textContent = state.posts.length;
+  $('bioText').textContent = state.bio || '';
+  const av = state.avatar;
+  const box=$('avatarBox');
+  if(av){ box.style.backgroundImage=`url(${av})`; box.querySelector('svg').style.display='none'; }
+  else { box.style.backgroundImage=''; box.querySelector('svg').style.display='block'; }
+  $('navPf').style.backgroundImage = av?`url(${av})`:'';
+  renderTab();
+}
+
+function switchTab(t){
+  currentTab=t;
+  $('tabGrid').classList.toggle('active', t==='grid');
+  $('tabReels').classList.toggle('active', t==='reels');
+  $('tabTag').classList.toggle('active', t==='tag');
+  renderTab();
+}
+
+function renderTab(){
+  const wrap=$('gridWrap');
+  if(currentTab==='grid') wrap.innerHTML = gridHTML(state.posts,'photo');
+  else if(currentTab==='reels') wrap.innerHTML = gridHTML(state.reels,'reel');
+  else wrap.innerHTML = `<div class="emptystate"><div class="ring"><svg viewBox="0 0 24 24"><path d="M4 7a2 2 0 012-2h12a2 2 0 012 2v13l-8-4-8 4V7z"/></svg></div><h3>아직 아무것도 없습니다</h3><p>회원님이 태그된 게시물이 여기에 표시됩니다.</p></div>`;
+}
+
+function gridHTML(items, kind){
+  if(items.length===0){
+    const label = kind==='reel' ? '릴스' : '게시물';
+    return `<div class="emptystate">
+      <div class="ring"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><rect x="3" y="6" width="18" height="14" rx="3"/><path d="M9 6l1.5-2h3L15 6"/></svg></div>
+      <h3>${label} 공유</h3>
+      <p>${kind==='reel'?'동영상을 추가하세요':'사진을 추가하세요'}</p>
+      <button onclick="${kind==='reel'?"addMedia('reel')":"addMedia('photo')"}">+ ${kind==='reel'?'동영상 추가':'사진 추가'}</button>
+    </div>`;
+  }
+  let cells='';
+  items.forEach((it,i)=>{
+    const open = kind==='reel' ? `onclick="openReels(${i})"` : `onclick="openFeed(${i})"`;
+    const u = murl(it);
+    const media = u
+      ? (kind==='reel'
+          ? `<video src="${u}" muted playsinline preload="metadata"></video><span class="reeltag"><svg viewBox="0 0 24 24"><path d="M3 7h18M8 3l2.5 4M14 3l2.5 4M10 11v6l5-3z" fill="#fff" stroke="#fff" stroke-width="1"/></svg></span>`
+          : `<img src="${u}">`)
+      : `<div class="empty"></div>`;
+    cells += `<div class="cell" ${open}>${media}</div>`;
+  });
+  return `<div class="grid">${cells}</div>`;
+}
+
+/* ---------- feed ---------- */
+function openFeed(index){
+  const wrap=$('feedWrap');
+  if(state.posts.length===0){
+    wrap.innerHTML = `<div class="emptystate" style="margin-top:40px;"><div class="ring"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><rect x="3" y="6" width="18" height="14" rx="3"/></svg></div><h3>게시물이 없습니다</h3><p>사진을 추가해 시작하세요.</p><button onclick="addMedia('photo')">+ 사진 추가</button></div>`;
+    showScreen('feedScreen'); return;
+  }
+  wrap.innerHTML = state.posts.map((p,i)=>postHTML(p,i)).join('');
+  showScreen('feedScreen');
+  requestAnimationFrame(()=>{
+    const el=document.getElementById('post-'+index);
+    if(el) el.scrollIntoView({block:'start'});
+  });
+}
+
+function postHTML(p,i){
+  const av = state.avatar?`style="background-image:url(${state.avatar})"`:'';
+  const avInner = state.avatar?'':`<svg viewBox="0 0 24 24"><path d="M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c-5 0-9 2.5-9 6v2h18v-2c0-3.5-4-6-9-6z"/></svg>`;
+  const media = murl(p) ? `<img src="${murl(p)}">` : `<div class="ph">사진이 없습니다</div>`;
+  const liked = p.liked ? 'liked' : '';
+  const heart = p.liked
+    ? `<svg class="liked" viewBox="0 0 24 24" onclick="toggleLike(${i})"><path d="M12 21s-7-4.6-9.5-8.2C.8 10.3 1.6 6.7 4.6 5.6 6.7 4.9 8.9 5.7 10 7.4c.5.7.9.7 1.3 0C12.4 5.7 14.6 4.9 16.7 5.6c3 1.1 3.8 4.7 2.1 7.2C19 16.4 12 21 12 21z"/></svg>`
+    : `<svg viewBox="0 0 24 24" onclick="toggleLike(${i})"><path d="M12 21s-7-4.6-9.5-8.2C.8 10.3 1.6 6.7 4.6 5.6 6.7 4.9 8.9 5.7 10 7.4c.5.7.9.7 1.3 0C12.4 5.7 14.6 4.9 16.7 5.6c3 1.1 3.8 4.7 2.1 7.2C19 16.4 12 21 12 21z"/></svg>`;
+  const cap = p.caption ? `<div class="cap"><b>seen.by.two</b>${esc(p.caption)}</div>` : '';
+  return `<div class="post" id="post-${i}">
+    <div class="head">
+      <div class="av" ${av}>${avInner}</div>
+      <div class="who">seen.by.two${p.loc?`<span class="loc" onclick="editLoc('photo',${i})">${esc(p.loc)}</span>`:''}</div>
+      <button class="icon-btn" onclick="postMenu('photo',${i})"><svg viewBox="0 0 24 24" style="width:20px;height:20px;stroke:#000;"><circle cx="5" cy="12" r="1.4" fill="#000" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="#000" stroke="none"/><circle cx="19" cy="12" r="1.4" fill="#000" stroke="none"/></svg></button>
+    </div>
+    <div class="media">${media}</div>
+    <div class="bar">
+      ${heart}
+      <svg viewBox="0 0 24 24" onclick="openComments(${i})"><path d="M21 11.5a8.4 8.4 0 01-9 8.4L3 21l1.1-4A8.4 8.4 0 1121 11.5z"/></svg>
+      <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      <span class="spacer"></span>
+      <svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></svg>
+    </div>
+    ${cap}
+    ${(p.comments&&p.comments.length)?`<div class="viewall" onclick="openComments(${i})">댓글 모두 보기 (${p.comments.length})</div>`:''}
+    <div class="pdate" onclick="editDate('photo',${i})">${fmt(p.date)}</div>
+    <div class="addc-mini" onclick="openComments(${i})">댓글 달기...</div>
+  </div>`;
+}
+
+function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function commentsHTML(p,i){
+  return (p.comments||[]).map((c,ci)=>{
+    const canTranslate = /[\u0600-\u06FF]/.test(c.text||'') || !!c.ko;
+    const avStyle = state.avatar ? `style="background-image:url(${state.avatar})"` : '';
+    const avInner = state.avatar ? '' : `<svg viewBox="0 0 24 24"><path d="M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c-5 0-9 2.5-9 6v2h18v-2c0-3.5-4-6-9-6z"/></svg>`;
+    return `<div class="cwrap">
+      <div class="cavatar" ${avStyle}>${avInner}</div>
+      <div class="cbody">
+        <div class="ctop">
+          <div class="c" id="ctxt-${i}-${ci}"><b>seen.by.two</b><span class="comment-text" dir="auto">${esc(c.text)}</span></div>
+          <button class="cmenu" onclick="deleteComment(${i},${ci})" aria-label="delete">···</button>
+        </div>
+        <div class="cmeta"><span>${relTime(c.createdAt)}</span>${canTranslate?`<span class="trans-link" id="tl-${i}-${ci}" onclick="translateComment(${i},${ci})">번역 보기</span>`:''}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function deleteComment(i,ci){
+  const p=state.posts[i]; if(!p||!p.comments||!p.comments[ci]) return;
+  if(!confirm('이 댓글을 삭제할까요?')) return;
+  p.comments.splice(ci,1); save();
+  if(cmtCtx===i) renderCmtList();
+  const w=$('feedWrap');
+  if(w && !$('feedScreen').classList.contains('hidden')){ const sy=w.scrollTop; w.innerHTML=state.posts.map((pp,k)=>postHTML(pp,k)).join(''); w.scrollTop=sy; }
+}
+
+async function translateComment(i,ci){
+  const c = state.posts[i].comments[ci];
+  const box = $(`ctxt-${i}-${ci}`), link = $(`tl-${i}-${ci}`);
+  if(!box||!link) return;
+  const textEl = box.querySelector('.comment-text');
+  if(!textEl) return;
+
+  // toggle back to original Arabic text
+  if(box.dataset.translated==='1'){
+    textEl.textContent=c.text;
+    textEl.dir='auto';
+    box.dataset.translated='0';
+    link.textContent='번역 보기';
+    return;
+  }
+
+  // use manual/cached Korean translation first
+  if(!c.ko){
+    link.textContent='번역 중...';
+    try{
+      const url='https://api.mymemory.translated.net/get?q='+encodeURIComponent(c.text)+'&langpair=ar|ko';
+      const res=await fetch(url);
+      const j=await res.json();
+      c.ko=(j && j.responseData && j.responseData.translatedText) ? j.responseData.translatedText : '';
+      if(c.ko) save();
+    }catch(e){ c.ko=''; }
+  }
+
+  if(!c.ko){
+    link.textContent='번역할 수 없습니다';
+    setTimeout(()=>{link.textContent='번역 보기';},1800);
+    return;
+  }
+
+  textEl.textContent=c.ko;
+  textEl.dir='ltr';
+  box.dataset.translated='1';
+  link.textContent='원문 보기';
+}
+
+
+function toggleLike(i){ state.posts[i].liked=!state.posts[i].liked; save(); const el=document.getElementById('post-'+i);
+  const cur=el.querySelector('.bar svg'); const idx=Array.from(el.parentNode.children).indexOf(el);
+  // simplest: rerender just this post
+  el.outerHTML = postHTML(state.posts[i], i);
+}
+function toggleCBtn(i){ const t=$('ct-'+i); $('cb-'+i).classList.toggle('on', t.value.trim().length>0); }
+function focusComment(i){ const t=$('ct-'+i); if(t){ t.focus(); t.scrollIntoView({block:'center'});} }
+/* ---------- comment sheet (Instagram-style) ---------- */
+let cmtCtx=null;
+function openComments(i){
+  cmtCtx=i;
+  renderCmtList();
+  const t=$('scText'); if(t) t.value='';
+  scToggle();
+  $('cmtBg').classList.add('show');
+}
+function closeComments(){ $('cmtBg').classList.remove('show'); }
+function renderCmtList(){
+  const p=state.posts[cmtCtx]; const list=$('cmtList'); if(!p||!list) return;
+  const html=commentsHTML(p,cmtCtx);
+  list.innerHTML = html || `<div class="empty">아직 댓글이 없습니다</div>`;
+}
+function scToggle(){ const b=$('scBtn'), t=$('scText'); if(b&&t) b.classList.toggle('on', t.value.trim().length>0); }
+function scAdd(){
+  if(cmtCtx==null) return;
+  const p=state.posts[cmtCtx];
+  const name='seen.by.two';
+  const text=$('scText').value.trim();
+  if(!text) return;
+  if(!p.comments) p.comments=[];
+  p.comments.push({name,text,createdAt:Date.now()});
+  save();
+  renderCmtList();
+  const w=$('feedWrap'); if(w){ const s=w.scrollTop; w.innerHTML=state.posts.map((pp,k)=>postHTML(pp,k)).join(''); w.scrollTop=s; }
+  $('scText').value=''; scToggle();
+  const list=$('cmtList'); if(list) list.scrollTop=list.scrollHeight;
+
+}
+
+function addComment(i){
+  const name=$('cn-'+i).value.trim()||'seen.by.two';
+  const text=$('ct-'+i).value.trim();
+  if(!text) return;
+  if(!state.posts[i].comments) state.posts[i].comments=[];
+  state.posts[i].comments.push({name,text,createdAt:Date.now()});
+  save();
+  $('cmts-'+i).innerHTML = commentsHTML(state.posts[i], i);
+  $('ct-'+i).value=''; toggleCBtn(i);
+  if(name!=='seen.by.two'){ showNoti(name, text, murl(state.posts[i])); }
+}
+
+/* ---------- fake notification banner ---------- */
+const NOTI_ICON = `<svg viewBox="0 0 48 48"><defs><linearGradient id="ngrad" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#ffc15e"/><stop offset="0.5" stop-color="#ff6f61"/><stop offset="1" stop-color="#e6396e"/></linearGradient></defs><rect width="48" height="48" rx="12" fill="url(#ngrad)"/><circle cx="20" cy="24" r="8" fill="none" stroke="#fff" stroke-width="2.4"/><circle cx="28" cy="24" r="8" fill="none" stroke="#fff" stroke-width="2.4"/></svg>`;
+let notiTimer=null;
+function showNoti(name, text, thumb){
+  const el=$('noti'); if(!el) return;
+  el.innerHTML = `
+    <div class="ic">${NOTI_ICON}</div>
+    <div class="tx">
+      <div class="top">Photogram · 지금</div>
+      <div class="ti">새 댓글</div>
+      <div class="bd">${esc(name)}님이 회원님의 게시물에 댓글을 남겼습니다: ${esc(text)}</div>
+    </div>
+    ${thumb?`<div class="thumb" style="background-image:url('${thumb}')"></div>`:''}`;
+  void el.offsetWidth;              // restart animation if already shown
+  el.classList.add('show');
+  clearTimeout(notiTimer);
+  notiTimer=setTimeout(()=>{ el.classList.remove('show'); }, 8000);
+}
+
+async function requestSystemNoti(){
+  if(!('Notification' in window)){ alert('이 브라우저는 시스템 알림을 지원하지 않습니다.'); return; }
+  const r=await Notification.requestPermission();
+  alert(r==='granted'?'시스템 알림 권한이 허용되었습니다.':'시스템 알림 권한이 허용되지 않았습니다.');
+}
+function showSystemNoti(name,text){
+  try{ if('Notification' in window && Notification.permission==='granted') new Notification('Photogram · 새 댓글',{body:`${name}: ${text}`}); }catch(e){}
+}
+
+let scenarioRuntime={running:false,paused:false,index:0,timer:null,dueAt:0,remainingMs:0,runId:null,postIndex:0};
+let scenarioRows=[];
+
+function normalizeScenarioRows(rows){
+  return (rows||[]).map((r,idx)=>({
+    delay:Math.max(0,Math.min(600,Number(r.delay)||0)),
+    text:String(r.text||''), ko:String(r.ko||r.ar||''), notify:r.notify!==false
+  }));
+}
+function openShootCommentManager(){
+  closeSheet();
+  if(!state.posts.length){ alert('먼저 게시물을 1개 이상 추가해 주세요.'); return; }
+  scenarioRows=normalizeScenarioRows(state.shootScenario&&state.shootScenario.rows);
+  if(!scenarioRows.length) scenarioRows=[{delay:0,text:'',ko:'',notify:true},{delay:4,text:'',ko:'',notify:true}];
+  const opts=state.posts.map((p,i)=>`<option value="${i}" ${(state.shootScenario&&state.shootScenario.postIndex===i)?'selected':''}>게시물 ${i+1}${p.caption?' · '+esc(p.caption.slice(0,18)):''}</option>`).join('');
+  $('modalBody').innerHTML = `
+    <div class="modal scenario-modal">
+      <div class="mhead">촬영용 대화 시나리오</div>
+      <div class="mbody">
+        <div><label>댓글을 넣을 게시물</label><select id="admPost" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:9px;font:inherit;">${opts}</select></div>
+        <div class="scenario-help">각 행의 시간은 <b>이전 댓글이 나온 뒤 다음 댓글까지 기다리는 시간</b>입니다. 첫 댓글을 바로 띄우려면 0초로 두세요.</div>
+        <div id="scenarioStatus" class="scenario-status"></div>
+        <div class="scenario-toolbar">
+          <button class="primary-ctl" onclick="startScenario()">▶ 전체 시작</button>
+          <button onclick="pauseResumeScenario()" id="scenarioPauseBtn">⏸ 일시정지</button>
+          <button onclick="runNextScenarioNow()">⏭ 다음 댓글 즉시</button>
+          <button onclick="restartScenario()">↺ 처음부터 다시</button>
+        </div>
+        <div id="scenarioRows"></div>
+        <button class="scenario-add" onclick="addScenarioRow()">＋ 댓글 추가</button>
+        <button class="scenario-add" onclick="requestSystemNoti()" style="margin-top:7px;">시스템 알림 권한 요청</button>
+      </div>
+      <div class="mfoot">
+        <button onclick="saveScenarioDraft();closeModal()">닫기</button>
+        <button class="primary" onclick="saveScenarioDraft();alert('시나리오가 저장되었습니다.')">시나리오 저장</button>
+      </div>
+    </div>`;
+  renderScenarioRows(); updateScenarioStatus();
+  $('modalBg').classList.add('show');
+}
+function renderScenarioRows(){
+  const box=$('scenarioRows'); if(!box)return;
+  box.innerHTML=scenarioRows.map((r,i)=>`
+    <div class="scenario-row">
+      <div class="scenario-row-head"><b>${i+1}번째 댓글</b><button onclick="removeScenarioRow(${i})">삭제</button></div>
+      <div class="scenario-row-grid">
+        <div><label>대기시간(초)</label><input type="number" min="0" max="600" step="1" value="${r.delay}" onchange="scenarioRows[${i}].delay=Math.max(0,Number(this.value)||0)"></div>
+        <div><label>아랍어 댓글</label><textarea dir="rtl" rows="2" placeholder="댓글 원문" oninput="scenarioRows[${i}].text=this.value">${esc(r.text)}</textarea></div>
+      </div>
+      <div style="margin-top:8px;"><label>직접 사용할 한국어 번역 (선택)</label><textarea dir="ltr" rows="2" placeholder="비워두면 번역 보기에서 자동 번역" oninput="scenarioRows[${i}].ko=this.value">${esc(r.ko)}</textarea></div>
+      <label class="notifyline"><input type="checkbox" ${r.notify?'checked':''} onchange="scenarioRows[${i}].notify=this.checked"> 이 댓글이 나타날 때 상단 알림도 표시</label>
+    </div>`).join('');
+}
+function addScenarioRow(){
+  scenarioRows.push({delay:4,text:'',ko:'',notify:true}); renderScenarioRows();
+  const body=$('scenarioRows'); if(body) setTimeout(()=>body.lastElementChild&&body.lastElementChild.scrollIntoView({behavior:'smooth',block:'nearest'}),0);
+}
+function removeScenarioRow(i){ if(scenarioRows.length<=1){alert('댓글은 최소 1개가 필요합니다.');return;} scenarioRows.splice(i,1);renderScenarioRows(); }
+function saveScenarioDraft(){
+  const sel=$('admPost');
+  state.shootScenario={postIndex:sel?parseInt(sel.value,10)||0:(state.shootScenario.postIndex||0),rows:normalizeScenarioRows(scenarioRows)};
+  save();
+}
+function updateScenarioStatus(){
+  const el=$('scenarioStatus'); if(!el)return;
+  const total=scenarioRuntime.running?scenarioRuntime.total:(scenarioRows.length||0);
+  if(scenarioRuntime.running){
+    const stateText=scenarioRuntime.paused?'일시정지됨':'실행 중';
+    el.textContent=`${stateText} · ${Math.min(scenarioRuntime.index+1,total)}/${total}번째 댓글 대기 중`;
+  } else if(scenarioRuntime.index>=total && total>0){ el.textContent=`완료 · 총 ${total}개 댓글 실행됨`; }
+  else el.textContent=`대기 중 · 총 ${total}개 댓글 설정됨`;
+  const b=$('scenarioPauseBtn'); if(b)b.textContent=scenarioRuntime.paused?'▶ 계속':'⏸ 일시정지';
+}
+function clearScenarioTimer(){ if(scenarioRuntime.timer){clearTimeout(scenarioRuntime.timer);scenarioRuntime.timer=null;} }
+function startScenario(){
+  saveScenarioDraft(); clearScenarioTimer();
+  const rows=normalizeScenarioRows(state.shootScenario.rows);
+  if(!rows.length||rows.every(r=>!r.text.trim())){alert('실행할 댓글을 입력해 주세요.');return;}
+  scenarioRuntime={running:true,paused:false,index:0,timer:null,dueAt:0,remainingMs:0,runId:'sr'+Date.now(),postIndex:state.shootScenario.postIndex,total:rows.length,rows};
+  scheduleCurrentScenarioRow(); updateScenarioStatus();
+}
+function scheduleCurrentScenarioRow(customMs){
+  if(!scenarioRuntime.running||scenarioRuntime.paused)return;
+  if(scenarioRuntime.index>=scenarioRuntime.rows.length){scenarioRuntime.running=false;clearScenarioTimer();updateScenarioStatus();return;}
+  const row=scenarioRuntime.rows[scenarioRuntime.index];
+  const ms=customMs!=null?customMs:Math.max(0,row.delay*1000);
+  scenarioRuntime.remainingMs=ms; scenarioRuntime.dueAt=Date.now()+ms;
+  clearScenarioTimer(); scenarioRuntime.timer=setTimeout(()=>executeScenarioRow(),ms); updateScenarioStatus();
+}
+function executeScenarioRow(){
+  if(!scenarioRuntime.running)return;
+  const row=scenarioRuntime.rows[scenarioRuntime.index]; const p=state.posts[scenarioRuntime.postIndex];
+  if(!row||!p){scenarioRuntime.running=false;updateScenarioStatus();return;}
+  const text=row.text.trim();
+  if(text){
+    if(!p.comments)p.comments=[];
+    const c={name:'seen.by.two',text,createdAt:Date.now(),_shootRun:scenarioRuntime.runId}; if(row.ko.trim())c.ko=row.ko.trim();
+    p.comments.push(c); save(); refreshCommentsEverywhere(scenarioRuntime.postIndex);
+    if(row.notify){showNoti('seen.by.two',text,murl(p));showSystemNoti('seen.by.two',text);}
+  }
+  scenarioRuntime.index++; scenarioRuntime.remainingMs=0;
+  if(scenarioRuntime.index>=scenarioRuntime.rows.length){scenarioRuntime.running=false;clearScenarioTimer();updateScenarioStatus();return;}
+  scheduleCurrentScenarioRow();
+}
+function refreshCommentsEverywhere(i){
+  if(cmtCtx===i && $('cmtBg').classList.contains('show')){renderCmtList();const list=$('cmtList');if(list)list.scrollTop=list.scrollHeight;}
+  const w=$('feedWrap'); if(w && !$('feedScreen').classList.contains('hidden')){const sy=w.scrollTop;w.innerHTML=state.posts.map((pp,k)=>postHTML(pp,k)).join('');w.scrollTop=sy;}
+}
+function pauseResumeScenario(){
+  if(!scenarioRuntime.running){alert('먼저 전체 시작을 눌러 주세요.');return;}
+  if(!scenarioRuntime.paused){
+    scenarioRuntime.remainingMs=Math.max(0,scenarioRuntime.dueAt-Date.now()); scenarioRuntime.paused=true; clearScenarioTimer();
+  }else{scenarioRuntime.paused=false;scheduleCurrentScenarioRow(scenarioRuntime.remainingMs);}
+  updateScenarioStatus();
+}
+function runNextScenarioNow(){
+  if(!scenarioRuntime.running){alert('먼저 전체 시작을 눌러 주세요.');return;}
+  clearScenarioTimer(); scenarioRuntime.paused=false; executeScenarioRow(); updateScenarioStatus();
+}
+function restartScenario(){
+  if(!scenarioRuntime.runId){startScenario();return;}
+  clearScenarioTimer();
+  const p=state.posts[scenarioRuntime.postIndex];
+  if(p&&p.comments)p.comments=p.comments.filter(c=>c._shootRun!==scenarioRuntime.runId);
+  save();refreshCommentsEverywhere(scenarioRuntime.postIndex);
+  const rows=normalizeScenarioRows(state.shootScenario.rows);
+  scenarioRuntime={running:true,paused:false,index:0,timer:null,dueAt:0,remainingMs:0,runId:'sr'+Date.now(),postIndex:state.shootScenario.postIndex,total:rows.length,rows};
+  scheduleCurrentScenarioRow();updateScenarioStatus();
+}
+
+/* ---------- reels player ---------- */
+function openReels(index){
+  const wrap=$('reelsWrap');
+  if(state.reels.length===0){
+    wrap.innerHTML = `<div class="reel"><div style="text-align:center;color:#aaa;">
+      <p class="empty">아직 릴스가 없습니다.</p>
+      <button style="margin-top:14px;background:#fff;border:none;border-radius:8px;padding:10px 18px;font-weight:700;cursor:pointer;" onclick="addMedia('reel')">+ 동영상 추가</button>
+    </div></div>`;
+    showScreen('reelsScreen'); return;
+  }
+  wrap.innerHTML = state.reels.map((r,i)=>{
+    const v = murl(r) ? `<video src="${murl(r)}" loop playsinline controls preload="metadata"></video>` : `<div class="empty">동영상이 없습니다</div>`;
+    const cap = r.caption?`<div class="cap">${esc(r.caption)}</div>`:'';
+    return `<div class="reel" id="reel-${i}">
+      ${v}
+      <div class="rinfo">
+        <div class="u">🔒 seen.by.two</div>
+        <div class="d" onclick="editDate('reel',${i})">${fmt(r.date)}</div>
+        ${cap}
+      </div>
+    </div>`;
+  }).join('');
+  showScreen('reelsScreen');
+  requestAnimationFrame(()=>{ const el=document.getElementById('reel-'+(index||0)); if(el) el.scrollIntoView(); });
+}
+
+/* ---------- add media ---------- */
+let pendingType=null, pendingFile=null, pendingUrl=null;
+let replaceCtx=null;
+function replaceMedia(type,i){
+  closeSheet();
+  replaceCtx={type,i};
+  if(type==='reel') $('videoInput').click();
+  else $('photoInput').click();
+}
+function addMedia(type){
+  closeSheet();
+  pendingType = (type==='reel')?'reel':'photo';
+  if(pendingType==='reel') $('videoInput').click();
+  else $('photoInput').click();
+}
+$('photoInput').onchange = e=>handleFile(e,'photo');
+$('videoInput').onchange = e=>handleFile(e,'reel');
+function handleFile(e,type){
+  const f=e.target.files[0]; e.target.value='';
+  if(!f) return;
+  if(replaceCtx){ doReplace(f); return; }
+  if(pendingUrl){ try{ URL.revokeObjectURL(pendingUrl); }catch(_){ } }
+  pendingFile=f; pendingType=type;
+  pendingUrl=URL.createObjectURL(f);
+  openUploadModal();
+}
+async function doReplace(f){
+  const ctx=replaceCtx; replaceCtx=null;
+  const arr=ctx.type==='reel'?state.reels:state.posts;
+  const item=arr[ctx.i];
+  if(!item) return;
+  const id='m'+Date.now()+Math.random().toString(36).slice(2,7);
+  let stored=false;
+  try{ await idbPut(id, f); stored=true; }catch(e){ stored=false; }
+  const oldMediaId=item.mediaId;
+  if(item._url){ try{ URL.revokeObjectURL(item._url); }catch(_){ } }
+  item.mediaId = stored?id:null;
+  item.src = null;
+  item._url = URL.createObjectURL(f);
+  if(oldMediaId){ try{ idbDel(oldMediaId); }catch(_){ } }
+  save(); renderProfile();
+  if(ctx.type==='reel') openReels(ctx.i); else openFeed(ctx.i);
+}
+
+function openUploadModal(){
+  const isReel = pendingType==='reel';
+  const prev = isReel
+    ? `<video src="${pendingUrl}" muted playsinline></video>`
+    : `<img src="${pendingUrl}">`;
+  $('modalBody').innerHTML = `
+    <div class="mhead">${isReel?'릴스':'게시물'} 새로 만들기</div>
+    <div class="mbody">
+      <div class="preview">${prev}</div>
+      <div>
+        <label>날짜</label>
+        <input type="date" id="upDate" value="${today()}">
+      </div>
+      <div>
+        <label>문구 (선택)</label>
+        <textarea id="upCap" rows="2" placeholder="문구 입력..."></textarea>
+      </div>
+    </div>
+    <div class="mfoot">
+      <button onclick="closeModal()">취소</button>
+      <button class="primary" id="shareBtn" onclick="saveMedia()">공유</button>
+    </div>`;
+  $('modalBg').classList.add('show');
+}
+async function saveMedia(){
+  if(!pendingFile) return;
+  const btn=$('shareBtn'); if(btn){ btn.textContent='저장 중...'; btn.style.pointerEvents='none'; }
+  const date=$('upDate').value||today();
+  const caption=$('upCap').value.trim();
+  if(caption.includes('!!')){
+    setTimeout(()=>showPostFail(), 600);
+    return;
+  }
+  const id='m'+Date.now()+Math.random().toString(36).slice(2,7);
+  let stored=false;
+  try{ await idbPut(id, pendingFile); stored=true; }catch(e){ stored=false; }
+  const item={ mediaId: stored?id:null, src:null, _url:pendingUrl, date, caption, comments:[], liked:false };
+  pendingUrl=null; pendingFile=null;
+  if(pendingType==='reel') state.reels.unshift(item);
+  else state.posts.unshift(item);
+  save(); closeModal();
+  renderProfile();
+  if(pendingType==='reel'){ switchTab('reels'); } else { switchTab('grid'); }
+  if(!stored){ setTimeout(()=>alert('이 동영상을 기기에 저장할 수 없습니다. 현재 세션에서만 표시되며 새로고침 후 사라질 수 있습니다. (브라우저 저장공간이 가득 찼거나 차단됨)'),100); }
+}
+
+/* ---------- date edit ---------- */
+function editDate(type,i){
+  const arr = type==='reel'?state.reels:state.posts;
+  const cur = arr[i].date || today();
+  $('modalBody').innerHTML = `
+    <div class="mhead">날짜 변경</div>
+    <div class="mbody"><input type="date" id="edDate" value="${cur}"></div>
+    <div class="mfoot">
+      <button onclick="closeModal()">취소</button>
+      <button class="primary" onclick="applyDate('${type}',${i})">저장</button>
+    </div>`;
+  $('modalBg').classList.add('show');
+}
+function applyDate(type,i){
+  const v=$('edDate').value; const arr=type==='reel'?state.reels:state.posts;
+  arr[i].date=v; save(); closeModal();
+  if(type==='reel') openReels(i); else openFeed(i);
+}
+
+/* ---------- location tag ---------- */
+function editLoc(type,i){
+  const arr = type==='reel'?state.reels:state.posts;
+  const cur = arr[i].loc || '';
+  $('modalBody').innerHTML = `
+    <div class="mhead">위치</div>
+    <div class="mbody"><input type="text" id="edLoc" value="${esc(cur)}" placeholder="위치 추가"></div>
+    <div class="mfoot">
+      <button onclick="closeModal()">취소</button>
+      <button class="primary" onclick="applyLoc('${type}',${i})">저장</button>
+    </div>`;
+  $('modalBg').classList.add('show');
+}
+function applyLoc(type,i){
+  const v=$('edLoc').value.trim(); const arr=type==='reel'?state.reels:state.posts;
+  arr[i].loc=v; save(); closeModal();
+  if(type==='reel') openReels(i); else openFeed(i);
+}
+
+/* ---------- bio edit ---------- */
+function editBio(){
+  $('modalBody').innerHTML = `
+    <div class="mhead">소개 편집</div>
+    <div class="mbody"><textarea id="bioIn" rows="3">${esc(state.bio)}</textarea></div>
+    <div class="mfoot">
+      <button onclick="closeModal()">취소</button>
+      <button class="primary" onclick="applyBio()">저장</button>
+    </div>`;
+  $('modalBg').classList.add('show');
+}
+function applyBio(){ state.bio=$('bioIn').value; save(); closeModal(); renderProfile(); }
+
+/* ---------- avatar ---------- */
+function changeAvatar(){ $('avatarInput').click(); }
+$('avatarInput').onchange=e=>{
+  const f=e.target.files[0]; e.target.value=''; if(!f) return;
+  const r=new FileReader(); r.onload=()=>{ state.avatar=r.result; save(); renderProfile(); }; r.readAsDataURL(f);
+};
+
+/* ---------- sheets ---------- */
+function openAddMenu(){
+  $('sheetBody').innerHTML = `
+    <div class="grab"></div>
+    <button class="opt" onclick="addMedia('photo')"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="M21 17l-5-5-4 4-2-2-7 7"/></svg>사진 게시물</button>
+    <button class="opt" onclick="addMedia('reel')"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M3 8h18M8 3l2.5 5M14 3l2.5 5"/></svg>릴스 (동영상)</button>
+  `;
+  $('sheetBg').classList.add('show');
+}
+function postMenu(type,i){
+  const arr = type==='reel'?state.reels:state.posts;
+  const isReel = type==='reel';
+  const replaceLabel = isReel ? '동영상 교체' : '사진 교체';
+  const upDisabled = i<=0 ? 'disabled' : '';
+  const downDisabled = i>=arr.length-1 ? 'disabled' : '';
+  $('sheetBody').innerHTML = `
+    <div class="grab"></div>
+    <button class="opt" onclick="replaceMedia('${type}',${i})"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 10-3 6.7L21 16"/><polyline points="21 11 21 16 16 16"/></svg>${replaceLabel}</button>
+    <button class="opt" ${upDisabled} onclick="moveItem('${type}',${i},-1)"><svg viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>위로 이동</button>
+    <button class="opt" ${downDisabled} onclick="moveItem('${type}',${i},1)"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>아래로 이동</button>
+    <button class="opt" onclick="closeSheet();editDate('${type}',${i})"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg>날짜 수정</button>
+    <button class="opt" onclick="closeSheet();editLoc('${type}',${i})"><svg viewBox="0 0 24 24"><path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>위치</button>
+    <button class="opt danger" onclick="deleteItem('${type}',${i})"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2"/></svg>삭제</button>
+  `;
+  $('sheetBg').classList.add('show');
+}
+function moveItem(type,i,dir){
+  closeSheet();
+  const arr=type==='reel'?state.reels:state.posts;
+  const j=i+dir;
+  if(j<0||j>=arr.length) return;
+  const t=arr[i]; arr[i]=arr[j]; arr[j]=t;
+  save(); renderProfile();
+  if(type==='reel') openReels(j); else openFeed(j);
+}
+function deleteItem(type,i){
+  const arr=type==='reel'?state.reels:state.posts;
+  const it=arr[i];
+  if(it){ if(it.mediaId) idbDel(it.mediaId); if(it._url){ try{ URL.revokeObjectURL(it._url); }catch(_){ } } }
+  arr.splice(i,1); save(); closeSheet();
+  renderProfile();
+  if(type==='reel') openReels(0); else openFeed(0);
+}
+function closeSheet(){ $('sheetBg').classList.remove('show'); }
+function closeModal(){ $('modalBg').classList.remove('show'); }
+
+/* ---------- profile menu / logout / login ---------- */
+function openProfileMenu(){
+  $('sheetBody').innerHTML = `
+    <div class="grab"></div>
+    <button class="opt" onclick="closeSheet()"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-2.7 1.1V21a2 2 0 11-4 0v-.1A1.6 1.6 0 006 19.4a1.6 1.6 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1A1.6 1.6 0 003 15a1.6 1.6 0 00-1.5-1H1a2 2 0 110-4h.1A1.6 1.6 0 003 9a1.6 1.6 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1A1.6 1.6 0 009 3.6 1.6 1.6 0 0010 2.1V2a2 2 0 114 0v.1A1.6 1.6 0 0016.6 3.6a1.6 1.6 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1A1.6 1.6 0 0021 9v.1A1.6 1.6 0 0022.5 10.6H23a2 2 0 110 4h-.1A1.6 1.6 0 0021 15z"/></svg>설정 및 개인정보</button>
+    <button class="opt" onclick="closeSheet()"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>내 활동</button>
+    <button class="opt danger" onclick="confirmLogout()"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>로그아웃</button>
+  `;
+  $('sheetBg').classList.add('show');
+}
+function confirmLogout(){
+  closeSheet();
+  $('modalBody').innerHTML = `
+    <div class="mhead">로그아웃</div>
+    <div class="mbody"><div style="text-align:center;color:var(--text2);font-size:14px;line-height:1.5;">다음 계정에서 로그아웃하시겠어요?<br><b style="color:var(--text)">seen.by.two</b>?</div></div>
+    <div class="mfoot">
+      <button onclick="closeModal()">취소</button>
+      <button class="primary" style="color:var(--red)" onclick="doLogout()">로그아웃</button>
+    </div>`;
+  $('modalBg').classList.add('show');
+}
+function doLogout(){ closeModal(); showScreen('loginScreen'); }
+function doLogin(){ showScreen('profileScreen'); }
+
+/* ---------- post-fail simulation (caption contains !!) ---------- */
+function showPostFail(){
+  $('modalBody').innerHTML = `
+    <div class="mhead" style="color:var(--red)">게시물 업로드 실패</div>
+    <div class="mbody"><div style="text-align:center;color:var(--text2);font-size:14px;line-height:1.6;">게시물을 업로드할 수 없습니다.<br>다시 시도해 주세요.</div></div>
+    <div class="mfoot"><button class="primary" onclick="closeModal()">확인</button></div>`;
+  $('modalBg').classList.add('show');
+}
+
+/* ---------- init ---------- */
+showScreen('profileScreen');
+renderProfile();
+setInterval(()=>{ if(cmtCtx!=null && $('cmtBg').classList.contains('show')) renderCmtList(); },30000);
+(async()=>{ try{ await hydrate(); }catch(e){} renderProfile(); })();
+</script>
+</body>
+</html>
